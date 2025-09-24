@@ -1,0 +1,115 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Educational content categories
+model Category {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  name        String        @unique
+  description String?
+  color       String?       @default("#3B82F6") // Hex color for UI
+  icon        String?       // Emoji or icon name
+  ageGroup    AgeGroup      @default(PRESCHOOL)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  facts       Fact[]        @relation("CategoryFacts")
+  flashcards  Flashcard[]   @relation("CategoryFlashcards")
+  
+  @@map("categories")
+}
+
+// Age groups for content targeting
+enum AgeGroup {
+  TODDLER      // 1-3 years
+  PRESCHOOL    // 3-5 years
+  KINDERGARTEN // 5-6 years
+  EARLY_GRADE  // 6-8 years
+}
+
+// Did You Know facts
+model Fact {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  description    String        // Longer text support
+  funFact        String?       // Additional interesting fact
+  categoryId     String        @db.ObjectId
+  category       Category      @relation("CategoryFacts", fields: [categoryId], references: [id], onDelete: Cascade)
+  ageGroup       AgeGroup      @default(PRESCHOOL)
+  difficulty     Difficulty    @default(EASY)
+  imageUrl       String?       // Optional image
+  isActive       Boolean       @default(true)
+  viewCount      Int           @default(0)
+  likes          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  userProgress   UserFactProgress[]
+  
+  @@map("facts")
+}
+
+// Flashcards for interactive learning
+model Flashcard {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  question       String
+  answer         String
+  categoryId     String           @db.ObjectId
+  category       Category         @relation("CategoryFlashcards", fields: [categoryId], references: [id], onDelete: Cascade)
+  ageGroup       AgeGroup         @default(PRESCHOOL)
+  difficulty     Difficulty       @default(EASY)
+  questionImage  String?          // Image for the question
+  answerImage    String?          // Image for the answer
+  audioUrl       String?          // Optional audio pronunciation
+  isActive       Boolean          @default(true)
+  usageCount     Int              @default(0)
+  successRate    Float            @default(0) // Track success rate
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  userProgress   UserFlashcardProgress[]
+  
+  @@map("flashcards")
+}
+
+// Difficulty levels
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+// User progress tracking (can be extended for full user system)
+model UserFactProgress {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  factId      String    @db.ObjectId
+  fact        Fact      @relation(fields: [factId], references: [id], onDelete: Cascade)
+  userId      String    // Can be device ID or user ID
+  isLiked     Boolean   @default(false)
+  isViewed    Boolean   @default(true)
+  viewedAt    DateTime  @default(now())
+  
+  @@unique([factId, userId])
+  @@map("user_fact_progress")
+}
+
+model UserFlashcardProgress {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  flashcardId     String     @db.ObjectId
+  flashcard       Flashcard  @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  userId          String     // Can be device ID or user ID
+  isCompleted     Boolean    @default(false)
+  attempts        Int        @default(1)
+  successCount    Int        @default(0)
+  lastAttemptAt   DateTime   @default(now())
+  completedAt     DateTime?
+  
+  @@unique([flashcardId, userId])
+  @@map("user_flashcard_progress")
+}

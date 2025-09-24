@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyPal Frontend Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        button {
+            background-color: #4F46E5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #3730A3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc2626;
+            background-color: #fee2e2;
+        }
+        .success {
+            color: #16a34a;
+            background-color: #dcfce7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 TinyPal Frontend Test</h1>
+        <p style="text-align: center; color: #666;">Test your TinyPal backend API with this simple frontend</p>
+
+        <div class="section">
+            <h2>📊 Database Status</h2>
+            <button onclick="checkDatabase()">Check Database Connection</button>
+            <div id="db-status" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>📂 Categories</h2>
+            <button onclick="getCategories()">Get All Categories</button>
+            <button onclick="createSampleCategory()">Create Sample Category</button>
+            <div id="categories-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>💡 Facts</h2>
+            <button onclick="getFacts()">Get All Facts</button>
+            <button onclick="createSampleFact()">Create Sample Fact</button>
+            <div id="facts-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🃏 Flashcards</h2>
+            <button onclick="getFlashcards()">Get All Flashcards</button>
+            <button onclick="createSampleFlashcard()">Create Sample Flashcard</button>
+            <div id="flashcards-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Quick Setup</h2>
+            <button onclick="createSampleData()">Create All Sample Data</button>
+            <button onclick="loadAllContent()">Load All Content</button>
+            <div id="setup-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL
+        const API_BASE_URL = 'http://localhost:4000/api';
+
+        // Helper function for API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'API call failed');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error(`API Error for ${endpoint}:`, error);
+                throw error;
+            }
+        }
+
+        // Database status check
+        async function checkDatabase() {
+            const resultDiv = document.getElementById('db-status');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Checking database connection...';
+
+            try {
+                // Test by trying to get categories
+                const result = await apiCall('/categories');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✅ Database connection successful!\n\nBackend is ready to serve educational content.';
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Database connection failed:\n${error.message}\n\nMake sure your backend server is running on http://localhost:4000`;
+            }
+        }
+
+        // Categories functions
+        async function getCategories() {
+            const resultDiv = document.getElementById('categories-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Loading categories...';
+
+            try {
+                const result = await apiCall('/categories');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Found ${result.categories.length} categories:\n\n${JSON.stringify(result.categories, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to load categories:\n${error.message}`;
+            }
+        }
+
+        async function createSampleCategory() {
+            const resultDiv = document.getElementById('categories-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Creating sample category...';
+
+            try {
+                const categoryData = {
+                    name: 'Animals',
+                    description: 'Learn about amazing animals!',
+                    color: '#4F46E5',
+                    icon: '🦁',
+                    ageGroup: 'PRESCHOOL'
+                };
+                
+                const result = await apiCall('/categories', 'POST', categoryData);
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Category created successfully:\n\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to create category:\n${error.message}`;
+            }
+        }
+
+        // Facts functions
+        async function getFacts() {
+            const resultDiv = document.getElementById('facts-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Loading facts...';
+
+            try {
+                const result = await apiCall('/facts');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Found ${result.facts.length} facts:\n\n${JSON.stringify(result.facts, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to load facts:\n${error.message}`;
+            }
+        }
+
+        async function createSampleFact() {
+            const resultDiv = document.getElementById('facts-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Creating sample fact...';
+
+            try {
+                // First get categories to find a category ID
+                const categoriesResult = await apiCall('/categories');
+                let categoryId = null;
+                
+                if (categoriesResult.categories.length > 0) {
+                    categoryId = categoriesResult.categories[0].id;
+                } else {
+                    // Create a category if none exist
+                    const newCategory = await apiCall('/categories', 'POST', {
+                        name: 'Animals',
+                        description: 'Learn about amazing animals!',
+                        color: '#4F46E5',
+                        icon: '🦁',
+                        ageGroup: 'PRESCHOOL'
+                    });
+                    categoryId = newCategory.id;
+                }
+
+                const factData = {
+                    title: 'Elephants Never Forget',
+                    description: 'Elephants have incredible memories and can remember other elephants they met years ago.',
+                    funFact: 'An elephant\'s brain weighs about 5 kg - that\'s heavier than a laptop computer!',
+                    categoryId: categoryId,
+                    ageGroup: 'PRESCHOOL',
+                    difficulty: 'EASY'
+                };
+                
+                const result = await apiCall('/facts', 'POST', factData);
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Fact created successfully:\n\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to create fact:\n${error.message}`;
+            }
+        }
+
+        // Flashcards functions
+        async function getFlashcards() {
+            const resultDiv = document.getElementById('flashcards-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Loading flashcards...';
+
+            try {
+                const result = await apiCall('/flashcards');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Found ${result.flashcards.length} flashcards:\n\n${JSON.stringify(result.flashcards, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to load flashcards:\n${error.message}`;
+            }
+        }
+
+        async function createSampleFlashcard() {
+            const resultDiv = document.getElementById('flashcards-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Creating sample flashcard...';
+
+            try {
+                // First get categories to find a category ID
+                const categoriesResult = await apiCall('/categories');
+                let categoryId = null;
+                
+                if (categoriesResult.categories.length > 0) {
+                    categoryId = categoriesResult.categories[0].id;
+                } else {
+                    // Create a category if none exist
+                    const newCategory = await apiCall('/categories', 'POST', {
+                        name: 'Animals',
+                        description: 'Learn about amazing animals!',
+                        color: '#4F46E5',
+                        icon: '🦁',
+                        ageGroup: 'PRESCHOOL'
+                    });
+                    categoryId = newCategory.id;
+                }
+
+                const flashcardData = {
+                    question: 'What is the largest land animal?',
+                    answer: 'The African Elephant',
+                    categoryId: categoryId,
+                    ageGroup: 'PRESCHOOL',
+                    difficulty: 'EASY'
+                };
+                
+                const result = await apiCall('/flashcards', 'POST', flashcardData);
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Flashcard created successfully:\n\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to create flashcard:\n${error.message}`;
+            }
+        }
+
+        // Setup functions
+        async function createSampleData() {
+            const resultDiv = document.getElementById('setup-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Creating sample data...';
+
+            try {
+                // Create category
+                const category = await apiCall('/categories', 'POST', {
+                    name: 'Animals',
+                    description: 'Learn about amazing animals!',
+                    color: '#4F46E5',
+                    icon: '🦁',
+                    ageGroup: 'PRESCHOOL'
+                });
+
+                // Create fact
+                const fact = await apiCall('/facts', 'POST', {
+                    title: 'Elephants Never Forget',
+                    description: 'Elephants have incredible memories and can remember other elephants they met years ago.',
+                    funFact: 'An elephant\'s brain weighs about 5 kg - that\'s heavier than a laptop computer!',
+                    categoryId: category.id,
+                    ageGroup: 'PRESCHOOL',
+                    difficulty: 'EASY'
+                });
+
+                // Create flashcard
+                const flashcard = await apiCall('/flashcards', 'POST', {
+                    question: 'What is the largest land animal?',
+                    answer: 'The African Elephant',
+                    categoryId: category.id,
+                    ageGroup: 'PRESCHOOL',
+                    difficulty: 'EASY'
+                });
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Sample data created successfully!\n\nCategory: ${category.name}\nFact: ${fact.title}\nFlashcard: ${flashcard.question}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to create sample data:\n${error.message}`;
+            }
+        }
+
+        async function loadAllContent() {
+            const resultDiv = document.getElementById('setup-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Loading all content...';
+
+            try {
+                const categories = await apiCall('/categories');
+                const facts = await apiCall('/facts');
+                const flashcards = await apiCall('/flashcards');
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Content loaded successfully!\n\nCategories: ${categories.categories.length}\nFacts: ${facts.facts.length}\nFlashcards: ${flashcards.flashcards.length}\n\n${JSON.stringify({
+                    categories: categories.categories,
+                    facts: facts.facts,
+                    flashcards: flashcards.flashcards
+                }, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Failed to load content:\n${error.message}`;
+            }
+        }
+
+        // Auto-check database connection on page load
+        window.addEventListener('load', function() {
+            checkDatabase();
+        });
+    </script>
+</body>
+</html>
