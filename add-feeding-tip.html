@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Feeding Tip Flashcard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .flashcard-display {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .question {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .answer {
+            color: #212529;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        button {
+            background-color: #FF6B6B;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #e55c5c;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍼 Add Feeding Tip Flashcard</h1>
+        <p style="text-align: center; color: #666;">Add your specific feeding distraction text as a flashcard</p>
+
+        <div class="flashcard-display">
+            <div class="question">What are some common distractions when feeding toddlers?</div>
+            <div class="answer">Toys and screens? Obvious distractions. But so are:
+- "Open your mouth! Here comes an aeroplane wooooo!!"
+- "Look there's a bird!", as the bite goes in &lt;child name&gt;'s mouth.
+- "I'm closing my eyes. Let me see who comes to take a bite: you or the cat!"</div>
+        </div>
+
+        <div style="text-align: center;">
+            <button onclick="createCategoryAndFlashcard()">Create This Flashcard</button>
+            <button onclick="testConnection()">Test Connection</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:4000/api';
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'API call failed');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error(`API Error for ${endpoint}:`, error);
+                throw error;
+            }
+        }
+
+        function showStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        async function testConnection() {
+            showStatus('Testing connection...', 'loading');
+            
+            try {
+                const result = await apiCall('/categories');
+                showStatus(`✅ Connection successful! Found ${result.categories.length} categories.`, 'success');
+            } catch (error) {
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function createCategoryAndFlashcard() {
+            showStatus('Creating category and flashcard...', 'loading');
+            
+            try {
+                // Step 1: Create the category
+                showStatus('Creating Parenting Tips category...', 'loading');
+                
+                let category;
+                try {
+                    category = await apiCall('/categories', 'POST', {
+                        name: 'Parenting Tips',
+                        description: 'Helpful tips for parents dealing with common challenges',
+                        color: '#FF6B6B',
+                        icon: '🍼'
+                    });
+                    showStatus('✅ Category created successfully!', 'success');
+                } catch (categoryError) {
+                    // If category creation fails, try to find existing one
+                    showStatus('Category creation failed, trying to find existing categories...', 'loading');
+                    const categoriesResult = await apiCall('/categories');
+                    
+                    if (categoriesResult.categories.length > 0) {
+                        category = categoriesResult.categories[0];
+                        showStatus(`Using existing category: ${category.name}`, 'success');
+                    } else {
+                        throw new Error('No categories available. Please create a category first.');
+                    }
+                }
+
+                // Wait a moment before creating flashcard
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Step 2: Create the flashcard
+                showStatus('Creating feeding tip flashcard...', 'loading');
+                
+                const flashcardData = {
+                    question: 'What are some common distractions when feeding toddlers?',
+                    answer: `Toys and screens? Obvious distractions. But so are:
+- "Open your mouth! Here comes an aeroplane wooooo!!"
+- "Look there's a bird!", as the bite goes in <child name>'s mouth.
+- "I'm closing my eyes. Let me see who comes to take a bite: you or the cat!"`,
+                    categoryId: category.id,
+                    ageGroup: 'PRESCHOOL',
+                    difficulty: 'EASY'
+                };
+                
+                const flashcard = await apiCall('/flashcards', 'POST', flashcardData);
+                
+                showStatus(
+                    `✅ Flashcard created successfully!\n\n` +
+                    `Question: ${flashcard.question}\n` +
+                    `Category: ${flashcard.category.name}\n` +
+                    `ID: ${flashcard.id}`,
+                    'success'
+                );
+                
+                console.log('Full flashcard data:', flashcard);
+                
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-test connection on page load
+        window.addEventListener('load', function() {
+            setTimeout(testConnection, 1000);
+        });
+    </script>
+</body>
+</html>

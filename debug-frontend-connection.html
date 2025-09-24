@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Frontend Connection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🐛 Debug Frontend Connection Issues</h1>
+    
+    <div class="test">
+        <h3>Test 1: Check Backend Status</h3>
+        <button onclick="checkBackendStatus()">Check Backend</button>
+        <div id="backend-status"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Test CORS</h3>
+        <button onclick="testCORS()">Test CORS</button>
+        <div id="cors-status"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 3: Fetch Flashcards</h3>
+        <button onclick="fetchFlashcards()">Fetch Flashcards</button>
+        <div id="flashcards-result"></div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 4: Create Sample Data</h3>
+        <button onclick="createSampleData()">Create Sample</button>
+        <div id="sample-result"></div>
+    </div>
+
+    <script>
+        // Check if backend is running
+        async function checkBackendStatus() {
+            const statusDiv = document.getElementById('backend-status');
+            try {
+                const response = await fetch('http://localhost:4000/api/flashcards', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <strong>✅ Backend is running!</strong><br>
+                    Status: ${response.status} ${response.statusText}<br>
+                    URL: http://localhost:4000/api/flashcards
+                `;
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <strong>❌ Backend connection failed</strong><br>
+                    Error: ${error.message}<br><br>
+                    <strong>Possible causes:</strong><br>
+                    • Backend server not running (run: npm start)<br>
+                    • Wrong port (should be 4000)<br>
+                    • Firewall blocking connection<br>
+                    • CORS issues
+                `;
+            }
+        }
+        
+        // Test CORS specifically
+        async function testCORS() {
+            const statusDiv = document.getElementById('cors-status');
+            try {
+                // Test with different origins
+                const testOrigins = [
+                    'http://localhost:3000',
+                    'http://localhost:3001',
+                    'file://'
+                ];
+                
+                let results = [];
+                for (let origin of testOrigins) {
+                    try {
+                        const response = await fetch('http://localhost:4000/api/flashcards', {
+                            method: 'GET',
+                            mode: 'cors',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Origin': origin
+                            }
+                        });
+                        results.push(`✅ ${origin}: ${response.status}`);
+                    } catch (err) {
+                        results.push(`❌ ${origin}: ${err.message}`);
+                    }
+                }
+                
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `<strong>CORS Test Results:</strong><br>${results.join('<br>')}`;
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `<strong>❌ CORS Test Failed:</strong><br>${error.message}`;
+            }
+        }
+        
+        // Fetch flashcards with detailed logging
+        async function fetchFlashcards() {
+            const resultDiv = document.getElementById('flashcards-result');
+            try {
+                console.log('🚀 Starting fetch...');
+                console.log('📍 URL: http://localhost:4000/api/flashcards');
+                
+                const response = await fetch('http://localhost:4000/api/flashcards', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                console.log('📡 Response received:', response);
+                console.log('📊 Status:', response.status, response.statusText);
+                
+                const data = await response.json();
+                console.log('📦 Data:', data);
+                
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <strong>✅ Success!</strong><br>
+                    <strong>Status:</strong> ${response.status}<br>
+                    <strong>Flashcards count:</strong> ${data.flashcards.length}<br>
+                    <strong>Full response:</strong>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Fetch failed:', error);
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `
+                    <strong>❌ Fetch Failed</strong><br>
+                    <strong>Error:</strong> ${error.message}<br>
+                    <strong>Type:</strong> ${error.name}<br>
+                    <strong>Stack:</strong> ${error.stack}
+                `;
+            }
+        }
+        
+        // Create sample data
+        async function createSampleData() {
+            const resultDiv = document.getElementById('sample-result');
+            try {
+                // Create category first
+                const categoryResponse = await fetch('http://localhost:4000/api/categories', {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'Parenting Tips',
+                        description: 'Helpful parenting advice',
+                        color: '#FF6B6B',
+                        icon: '🍼'
+                    })
+                });
+                
+                const categoryData = await categoryResponse.json();
+                console.log('Category created:', categoryData);
+                
+                // Create flashcard
+                const flashcardResponse = await fetch('http://localhost:4000/api/flashcards', {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: "What are some common distractions when feeding toddlers?",
+                        answer: "Toys and screens? Obvious distractions. But so are:\n- \"Open your mouth! Here comes an aeroplane wooooo!!\"\n- \"Look there's a bird!\", as the bite goes in <child name>'s mouth.\n- \"I'm closing my eyes. Let me see who comes to take a bite: you or the cat!\"",
+                        categoryId: categoryData.id,
+                        difficulty: "beginner",
+                        tags: ["feeding", "toddlers", "distractions"]
+                    })
+                });
+                
+                const flashcardData = await flashcardResponse.json();
+                console.log('Flashcard created:', flashcardData);
+                
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <strong>✅ Sample data created!</strong><br>
+                    <strong>Category:</strong> ${categoryData.name}<br>
+                    <strong>Flashcard:</strong> ${flashcardData.question}
+                `;
+                
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `<strong>❌ Failed to create sample data:</strong><br>${error.message}`;
+            }
+        }
+        
+        // Auto-run basic test on page load
+        window.onload = function() {
+            console.log('🧪 Debug page loaded');
+            console.log('📍 Current origin:', window.location.origin);
+            console.log('🔍 User agent:', navigator.userAgent);
+        };
+    </script>
+</body>
+</html>
